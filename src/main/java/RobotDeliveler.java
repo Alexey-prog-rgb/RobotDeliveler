@@ -19,6 +19,25 @@ public class RobotDeliveler {
     public static final Map<Integer, Integer> sizeToFreq = new HashMap<>();
 
     public static void main(String[] args) {
+        Thread treadMaxCounter = new Thread(() ->{
+            while(!Thread.interrupted()){
+                try {
+                    // Посчёт команд 'R'
+                    synchronized (sizeToFreq){
+                        sizeToFreq.wait();
+                        // Самое частое количество команд 'R'
+                        Optional<Integer> maxFreq = sizeToFreq.values().stream()
+                                .max(Integer::compareTo);
+                        System.out.println("Максимальное количество команд 'R': " + maxFreq.get());
+                    }
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            System.out.println("Поток для подсчёта максамлного количества команд 'R' завершён!");
+        });
+        treadMaxCounter.start();
+
         for (int i = 0; i < MAX_ROUTE; i++) {
             new Thread(() -> {
                 String route = generateRoute("RLRFR", MAX_ROUTE_LENGTH);
@@ -38,6 +57,7 @@ public class RobotDeliveler {
                     } else {
                         sizeToFreq.put(countR, freq + 1);
                     }
+                    sizeToFreq.notify();
                 }
             }).start();
         }
@@ -51,5 +71,11 @@ public class RobotDeliveler {
             Integer value = entry.getValue();
             System.out.println(" - " + key + " (" + value + " раз)");
         }
+        // Завершение потока для подсчёта максамлного количества команд 'R'
+        synchronized (sizeToFreq){
+            sizeToFreq.notify();
+            treadMaxCounter.interrupt();
+        }
+
     }
 }
