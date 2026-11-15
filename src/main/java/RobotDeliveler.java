@@ -1,7 +1,4 @@
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 
 public class RobotDeliveler {
     private static int MAX_ROUTE = 1000;
@@ -31,15 +28,15 @@ public class RobotDeliveler {
                         System.out.println("Максимальное количество команд 'R': " + maxFreq.get());
                     }
                 } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
+                    System.out.println("Ошибка при ожидании завершения потока: " + e);
                 }
             }
             System.out.println("Поток для подсчёта максамлного количества команд 'R' завершён!");
         });
         treadMaxCounter.start();
-
+        List<Thread> threads = new ArrayList<>();
         for (int i = 0; i < MAX_ROUTE; i++) {
-            new Thread(() -> {
+            Thread thread = new Thread(() -> {
                 String route = generateRoute("RLRFR", MAX_ROUTE_LENGTH);
                 // Посчёт команд 'R'
                 int countR = 0;
@@ -59,8 +56,19 @@ public class RobotDeliveler {
                     }
                     sizeToFreq.notify();
                 }
-            }).start();
+            });
+            threads.add(thread);
+            thread.start();
         }
+
+        for(Thread thread : threads){
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                System.out.println("Ошибка при ожидании завершения потока: " + e);
+            }
+        }
+
         // Самое частое количество команд 'R'
         Optional<Integer> maxFreq = sizeToFreq.values().stream()
                 .max(Integer::compareTo);
